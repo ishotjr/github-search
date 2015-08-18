@@ -36,8 +36,7 @@ class SearchFrame(wx.Frame):
 			print('self.test_credentials()')
 		else:
 			print('!self.test_credentials()')		
-		# TODO:
-		#	self.switch_to_search_panel()
+		self.switch_to_search_panel()
 
 		self.SetTitle('GitHub Issue Search')
 		self.Show()
@@ -51,12 +50,11 @@ class SearchFrame(wx.Frame):
 		self.SetMenuBar(menuBar)
 
 		# start with login UI
-		# TODO:
-		#self.login_panel = LoginPanel(self, onlogin=self.login_accepted)
+		self.login_panel = LoginPanel(self, onlogin=self.login_accepted)
 
 	def do_layout(self):
 		self.sizer = wx.BoxSizer(wx.VERTICAL)
-		#self.sizer.Add(self.login_panel, 1, flag=wx.EXPAND | wx.ALL, border=10)
+		self.sizer.Add(self.login_panel, 1, flag=wx.EXPAND | wx.ALL, border=10)
 		self.SetSizer(self.sizer)
 
 	def test_credentials(self):
@@ -134,6 +132,70 @@ class LoginPanel(wx.Panel):
 			self.error.SetLabel('ERROR: ' + data['message'])
 		elif callable(self.callback):
 			self.callback(u, p)
+
+
+class SearchPanel(wx.Panel):
+	def __init__(self, *args, **kwargs):
+		self.orgs = kwargs.pop('orgs', [])
+		self.credentials = kwargs.pop('credentials', {})
+		wx.Panel.__init__(self, *args, **kwargs)
+
+		self.create_controls()
+		self.do_layout()
+
+	def create_controls(self):
+		self.results_panel = None
+		self.orgChoice = wx.Choice(self, choices=self.orgs, style=wx.CB_SORT)
+		self.searchTerm = wx.TextCtrl(self, style=wx.TE_PROCESS_ENTER)
+		self.searchTerm.SetFocus()
+		self.searchButton = wx.Button(self, label="Search")
+
+		# bind events
+		self.searchButton.Bind(wx.EVT_BUTTON, self.do_search)
+		self.searchTerm.Bind(wx.EVT_TEXT_ENTER, self.do_search)
+
+	def do_layout(self):
+		# arrange choice, query box, and button horizontally
+		hbox = wx.BoxSizer(wx.HORIZONTAL)
+		hbox.Add(self.orgChoice, 0, wx.EXPAND)
+		hbox.Add(self.searchTerm, 1, wx.EXPAND | wx.LEFT, 5)
+		hbox.Add(self.searchButton, 0, wx.EXPAND | wx.LEFT, 5)
+		
+		# dock everything to the top, leaving room for the results
+		self.vbox = wx.BoxSizer(wx.VERTICAL)
+		self.vbox.Add(hbox, 0, wx.EXPAND)
+		self.SetSizer(self.vbox)
+
+	def do_search(self, event):
+		term = self.searchTerm.GetValue()
+		org = self.orgChoice.GetString(self.orgChoice.GetCurrentSelection())
+		g = Github(self.credentials['username'], self.credentials['password'])
+		code,data = g.search.issues.get(q="user:{} {}".format(org, term))
+		if code != 200:
+			self.display_error(code, data)
+		else:
+			self.display_results(data['items'])
+
+	def display_results(self, results):
+		if self.results_panel:
+			self.results_panel.Destroy()
+		self.results_panel = SearchResultsPanel(self, -1, results=results)
+		self.vbox.Add(self.results_panel, 1, wx.EXPAND | wx.TOP, 5)
+		self.vbox.Layout()
+
+	def display_error(self, code, data):
+		if self.results_panel:
+			self.results_panel.Destroy()
+		if 'errors' in data:
+			str = ''.join('\n\n{}'.format(e['message']) for e in data['errors'])
+		else:
+			str = data['message']
+		self.results_panel = wx.StaticText(self, label=str)
+		self.results_panel.SetForegroundColour((200,0,0))
+		self.vbox.Add(self.results_panel, 1, wx.EXPAND | wx.TOP, 5)
+		self.vbox.Layout()
+		width = self.results_panel.GetSize().x
+		self.results_panel.Wrap(width)
 
 
 if __name__ == '__main__':
