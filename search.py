@@ -60,13 +60,13 @@ class SearchFrame(wx.Frame):
 	def test_credentials(self):
 		if any(k not in self.credentials for k in ['username', 'password']):
 			return False
-			g = Github(self.credentials['username'], self.credentials['password'])
-			status,data = g.users.orgs.get()
-			if status != 200:
-				print('bad credentials in store')
-				return False
-			self.orgs = [o['login'] for o in data]
-			return True
+		g = Github(self.credentials['username'], self.credentials['password'])
+		status,data = g.users.orgs.get()
+		if status != 200:
+			print('bad credentials in store')
+			return False
+		self.orgs = [o['login'] for o in data]
+		return True
 
 	def login_accepted(self, username, password):
 		self.credentials['username'] = username
