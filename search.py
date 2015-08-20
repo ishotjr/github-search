@@ -198,6 +198,67 @@ class SearchPanel(wx.Panel):
 		self.results_panel.Wrap(width)
 
 
+class SearchResultsPanel(wx.ScrolledWindow):
+	def __init__(self, *args, **kwargs):
+		results = kwargs.pop('results', [])
+		wx.PyScrolledWindow.__init__(self, *args, **kwargs)
+
+		# lay out search controls inside scrollable area
+		vbox = wx.BoxSizer(wx.VERTICAL)
+		if not results:
+			vbox.Add(wx.StaticText(self, label="(no results)"), 0, wx.EXPAND)
+		for r in results:
+			vbox.Add(SearchResult(self, result=r), flag=wx.TOP | wx.BOTTOM, border=8)
+		self.SetSizer(vbox)
+		self.SetScrollbars(0, 4, 0, 0)
+
+class SearchResult(wx.Panel):
+	def __init__(self, *args, **kwargs):
+		self.result = kwargs.pop('result', {})
+		wx.Panel.__init__(self, *args, **kwargs)
+
+		self.create_controls()
+		self.do_layout()
+
+	def create_controls(self):
+		titlestr = self.result['title']
+		if self.result['state'] != 'open':
+			titlestr += ' ({})'.format(self.result['state'])
+		teststr = self.first_line(self.result['body'])
+		self.title = wx.StaticText(self, label=titlestr)
+		self.text = wx.StaticText(self, label=textstr)
+
+		# adjust the title font
+		titleFont = wx.Font(16, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD)
+		self.title.SetFont(titleFont)
+
+		# bind click and hover events on this whole control
+		self.Bind(wx.EVT_LEFT_UP, self.on_click)
+		self.Bind(wx.EVT_ENTER_WINDOW, self.enter)
+		self.Bind(wx.EVT_LEAVE_WINDOW, self.leave)
+
+	def do_layout(self):
+		vbox = wx.BoxSizer(wx.VERTICAL)
+		vbox.Add(self.title, flag=wx.EXPAND | wx.BOTTOM, border=2)
+		vbox.Add(self.text, flag=wx.EXPAND)
+		self.SetSizer(vbox)
+
+	def enter(self, _):
+		self.title.SetForegroundColour(wx.BLUE)
+		self.text.SetForegroundColour(wx.BLUE)
+
+	def leave(self, _):
+		self.title.SetForegroundColour(wx.BLACK)
+		self.text.SetForegroundColour(wx.BLACK)
+
+	def on_click(self, event):
+		import webbrowser
+		webbrowser.open(self.result['html_url'])
+
+	def first_line(self, body):
+		return body.split('\n')[0].strip() or '(no body)'
+
+
 if __name__ == '__main__':
 	app = wx.App()
 	SearchFrame(None)
