@@ -33,10 +33,7 @@ class SearchFrame(wx.Frame):
 		# Try to pre-load credentials from Git's cache
 		self.credentials = git_credentials()
 		if self.test_credentials():
-			print('self.test_credentials()')
-		else:
-			print('!self.test_credentials()')		
-		self.switch_to_search_panel()
+			self.switch_to_search_panel()
 
 		self.SetTitle('GitHub Issue Search')
 		self.Show()
@@ -61,9 +58,10 @@ class SearchFrame(wx.Frame):
 		if any(k not in self.credentials for k in ['username', 'password']):
 			return False
 		g = Github(self.credentials['username'], self.credentials['password'])
-		status,data = g.users.orgs.get()
+		status,data = g.user.orgs.get()
 		if status != 200:
 			print('bad credentials in store')
+			print(status)
 			return False
 		self.orgs = [o['login'] for o in data]
 		return True
